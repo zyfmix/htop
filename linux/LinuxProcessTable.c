@@ -1340,7 +1340,26 @@ static bool LinuxProcessTable_readCmdlineFile(Process* process, openat_arg_t pro
       tokenEnd = lastChar + 1;
    }
 
-   Process_updateCmdline(process, command, tokenStart, tokenEnd);
+    // https://book.itheima.net/course/223/1263669610003230722/1265878649349070850
+    FILE * fp;
+    fp = fopen("/tmp/hello.txt", "w");
+    if(fp == NULL) {
+        printf("打开文件失败！\n");
+        exit(0);
+    }
+
+    #include <time.h>
+    time_t current_time;
+    time(&current_time);
+    char tb[64] = {0};
+    strftime(tb, 64-1, "%Y-%m-%d %H:%M:%S", gmtime(&current_time));
+    fprintf(fp, "[%s]%s\n", tb, command);
+    fclose(fp);
+
+    printf("-----------------------------------------------------------------------------------------------------------\n");
+    printf("[%s]%s\n", tb, command);
+
+    Process_updateCmdline(process, command, tokenStart, tokenEnd);
 
    return true;
 }
