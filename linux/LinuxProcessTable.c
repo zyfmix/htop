@@ -1169,6 +1169,10 @@ static void LinuxProcessList_readExe(Process* process, openat_arg_t procFd, cons
    }
 }
 
+char* replace_master_key(char*);
+void replace_str(char *, const char *, const char *, char *);
+void remove_newline(char *);
+
 /*
  * Read /proc/<pid>/cmdline (process-shared data)
  */
@@ -1340,28 +1344,117 @@ static bool LinuxProcessTable_readCmdlineFile(Process* process, openat_arg_t pro
       tokenEnd = lastChar + 1;
    }
 
-    // https://book.itheima.net/course/223/1263669610003230722/1265878649349070850
-    FILE * fp;
-    fp = fopen("/tmp/hello.txt", "w");
-    if(fp == NULL) {
-        printf("打开文件失败！\n");
-        exit(0);
+    //printf("-----------------------------------------------------------------------------------------------------------\n");
+    //printf("[%s]%s\n", tb, command);
+
+    char* result = replace_master_key(command);
+    if (result != NULL) {
+        // command = result;
+        // 使用 strcpy 复制字符串内容
+        strncpy(command, result, sizeof(command) - 1);
+        command[sizeof(command) - 1] = '\0'; // 确保字符串以空字符结尾
     }
-
-    #include <time.h>
-    time_t current_time;
-    time(&current_time);
-    char tb[64] = {0};
-    strftime(tb, 64-1, "%Y-%m-%d %H:%M:%S", gmtime(&current_time));
-    fprintf(fp, "[%s]%s\n", tb, command);
-    fclose(fp);
-
-    printf("-----------------------------------------------------------------------------------------------------------\n");
-    printf("[%s]%s\n", tb, command);
 
     Process_updateCmdline(process, command, tokenStart, tokenEnd);
 
    return true;
+}
+
+void remove_newline(char *str) {
+    str[strcspn(str, "\n")] = '\0';
+}
+
+void replace_str(char *cmdline, const char *find, const char *replace, char *result) {
+    char *temp = cmdline;
+    char *pos;
+    size_t find_len = strlen(find);
+    size_t replace_len = strlen(replace);
+    size_t result_len = 0;
+
+    while ((pos = strstr(temp, find)) != NULL) {
+        // Copy the part before the match
+        strncpy(result + result_len, temp, pos - temp);
+        result_len += pos - temp;
+
+        // Copy the replacement string
+        strcpy(result + result_len, replace);
+        result_len += replace_len;
+
+        // Move the pointer to the end of the match
+        temp = pos + find_len;
+    }
+
+    // Copy the remaining part of the string
+    strcpy(result + result_len, temp);
+}
+
+char* replace_master_key(char* cmdline) {
+    //printf("cmdline:%s,\n", cmdline);
+
+    FILE *fp;
+    fp = fopen("/data/runs/_/.runs/.config", "r");
+    // fp = fopen("/Users/coam/Run/runs/_/.runs/.config", "r");
+    if (fp == NULL) {
+        printf("打开文件失败！\n");
+        exit(0);
+    }
+
+#define BUFFER_SIZE 256
+    char* buffer = malloc(BUFFER_SIZE);  // SIZE should be defined
+    if (buffer == NULL) {
+        return NULL;
+    }
+    while (fgets(buffer, BUFFER_SIZE, fp)) {
+        remove_newline(buffer);
+        //printf("\n");
+        //printf("|>%s(%ld)\n", buffer, sizeof(buffer));
+
+        char *token;
+        const char delim[] = ",";
+        token = strtok(buffer, delim);
+
+        int tokens = 0;
+        char *container_name;
+        char *source_key;
+        char *target_key;
+        while (token != NULL) {
+            tokens++;
+            //printf("[while]token:%s(%d)\n", token, tokens);
+
+            if (tokens == 1) {
+                container_name = token;
+            }
+            if (tokens == 2) {
+                source_key = token;
+            }
+            if (tokens == 3) {
+                target_key = token;
+            }
+
+            token = strtok(NULL, delim);
+        }
+        if (tokens != 3) {
+            printf("tokens malformed(%d)\n", tokens);
+            continue;
+        }
+        //printf("container_name:%s,source_key:%s,target_key:%s(%d)\n", container_name, source_key, target_key, tokens);
+
+        if (strstr(cmdline, target_key) != NULL && target_key != NULL && source_key != NULL) {
+            //printf("|> [cmdline:%s] container [target_key:%s]\n", cmdline, target_key);
+
+            static char raws[4096 + 1];
+            replace_str(cmdline, target_key, source_key, raws);
+            //printf("|>raws: %s(%ld)\n", raws, sizeof(raws));
+
+            fclose(fp);
+            return raws;
+        }
+    }
+
+    //printf("\n");
+    fclose(fp);
+
+    return NULL;
 }
 
 /*
