@@ -11,9 +11,7 @@ rs_path=${sc_dir/htop*/htop}
 source $rs_path/bin/libs/headers.sh
 
 ebc_info "首先清除已编译文件..."
-mkdir -p bin/build && rm -rf bin/build/*
-
-rm -rf logs/*.log
+mkdir -p build && rm -rf build/*
 
 Case=${1:-rebuild}
 
@@ -29,8 +27,8 @@ build)
   ebc_debug "sudo apt install libncursesw5-dev autotools-dev autoconf automake build-essential"
   sudo apt install libncursesw5-dev autotools-dev autoconf automake build-essential
 
-  ebc_debug "./autogen.sh && ./configure && make"
-  ./autogen.sh && ./configure && make
+  ebc_debug "./autogen.sh && ./configure --enable-static && make"
+  ./autogen.sh && ./configure --enable-static && make
  ;;
 rebuild)
   ebc_debug "make"
