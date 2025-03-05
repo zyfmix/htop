@@ -36,6 +36,9 @@ rebuild)
   ebc_debug "make"
   make
 
+  ebc_debug "du -hs ./htop"
+  du -hs ./htop
+
   ebc_debug "./htop --version"
   ./htop --version
 

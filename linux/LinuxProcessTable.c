@@ -1171,7 +1171,7 @@ static void LinuxProcessList_readExe(Process* process, openat_arg_t procFd, cons
 
 //char* replace_master_key(char*);
 //void replace_str(char *, const char *, const char *, char *);
-//void remove_newline(char *);
+void remove_newline(char *);
 char* search_source_key(char* cmdline);
 
 /*
@@ -1375,7 +1375,7 @@ char* search_source_key(char* cmdline) {
         return NULL;
     }
 
-#define BUFFER_SIZE 256
+    #define BUFFER_SIZE 256
     char* buffer = malloc(BUFFER_SIZE);  // SIZE should be defined
     if (buffer == NULL) {
         return NULL;
@@ -1395,6 +1395,10 @@ char* search_source_key(char* cmdline) {
     }
 
     return NULL;
+}
+
+void remove_newline(char *str) {
+    str[strcspn(str, "\n")] = '\0';
 }
 
 /*
