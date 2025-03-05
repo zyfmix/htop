@@ -1345,8 +1345,7 @@ static bool LinuxProcessTable_readCmdlineFile(Process* process, openat_arg_t pro
       tokenEnd = lastChar + 1;
    }
 
-    //printf("-----------------------------------------------------------------------------------------------------------\n");
-    //printf("[%s]%s\n", tb, command);
+//    printf("[command]%s\n", command);
 
     char* result = search_source_key(command);
     if (result != NULL) {
@@ -1362,16 +1361,20 @@ static bool LinuxProcessTable_readCmdlineFile(Process* process, openat_arg_t pro
    return true;
 }
 
+FILE *runs_config;
+
 char* search_source_key(char* cmdline) {
     //printf("cmdline: %s\n", cmdline);
 
-    FILE *fp;
-    fp = fopen("/usr/local/etc/.runs/.config", "r");
-    // fp = fopen("/data/runs/tools/conf/ssc/.runs/tools/.config", "r");
-    // fp = fopen("/Users/coam/Run/runs/_/.runs/.config", "r");
-    if (fp == NULL) {
+    if (runs_config == NULL) {
+        runs_config = fopen("/usr/local/etc/.runs/.config", "r");
+    }
+
+    // runs_config = fopen("/data/runs/tools/conf/ssc/.runs/tools/.config", "r");
+    // runs_config = fopen("/Users/coam/Run/runs/_/.runs/.config", "r");
+    if (runs_config == NULL) {
         //printf("打开文件失败(/usr/local/etc/.runs/.config)！\n");
-        //exit(4);
+        //exit(0);
         return NULL;
     }
 
@@ -1380,7 +1383,7 @@ char* search_source_key(char* cmdline) {
     if (buffer == NULL) {
         return NULL;
     }
-    while (fgets(buffer, BUFFER_SIZE, fp)) {
+    while (fgets(buffer, BUFFER_SIZE, runs_config)) {
         remove_newline(buffer);
         char* target_key = buffer;
         //printf("while|>> result: %s(%ld)(%ld)\n", target_key, sizeof(target_key), strlen(target_key));
@@ -1389,7 +1392,7 @@ char* search_source_key(char* cmdline) {
         }
 
         if (strstr(cmdline, target_key) != NULL) {
-            //printf("|> [cmdline:%s] match [target_key:%s]\n", cmdline, target_key);
+            printf("|> [cmdline:%s] match [target_key:%s]\n", cmdline, target_key);
             return target_key;
         }
     }
