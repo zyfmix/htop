@@ -15,7 +15,7 @@ mkdir -p bin/build && rm -rf bin/build/*
 
 rm -rf logs/*.log
 
-Case=${1:-run}
+Case=${1:-rebuild}
 
 ebc_debug "解析命令参数> run.sh $Case"
 
@@ -26,14 +26,24 @@ help)
   ebc_debug "示例: run.sh run"
   ;;
 build)
+  ebc_debug "sudo apt install libncursesw5-dev autotools-dev autoconf automake build-essential"
   sudo apt install libncursesw5-dev autotools-dev autoconf automake build-essential
+
+  ebc_debug "./autogen.sh && ./configure && make"
   ./autogen.sh && ./configure && make
  ;;
 rebuild)
+  ebc_debug "make"
   make
+
+  ebc_debug "./htop --version"
   ./htop --version
+
+  ebc_debug "cp ./htop /data/runs/tools/build/"
+  cp ./htop /data/runs/tools/build/
  ;;
 run)
+  ebc_debug "./htop --version"
   ./htop --version
  ;;
 *)

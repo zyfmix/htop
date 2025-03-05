@@ -1169,9 +1169,10 @@ static void LinuxProcessList_readExe(Process* process, openat_arg_t procFd, cons
    }
 }
 
-char* replace_master_key(char*);
-void replace_str(char *, const char *, const char *, char *);
-void remove_newline(char *);
+//char* replace_master_key(char*);
+//void replace_str(char *, const char *, const char *, char *);
+//void remove_newline(char *);
+char* search_source_key(char* cmdline);
 
 /*
  * Read /proc/<pid>/cmdline (process-shared data)
@@ -1347,12 +1348,13 @@ static bool LinuxProcessTable_readCmdlineFile(Process* process, openat_arg_t pro
     //printf("-----------------------------------------------------------------------------------------------------------\n");
     //printf("[%s]%s\n", tb, command);
 
-    char* result = replace_master_key(command);
+    char* result = search_source_key(command);
     if (result != NULL) {
         // command = result;
         // 使用 strcpy 复制字符串内容
-        strncpy(command, result, sizeof(command) - 1);
-        command[sizeof(command) - 1] = '\0'; // 确保字符串以空字符结尾
+        //strncpy(command, result, sizeof(command) - 1);
+        //command[sizeof(command) - 1] = '\0'; // 确保字符串以空字符结尾
+        return true;
     }
 
     Process_updateCmdline(process, command, tokenStart, tokenEnd);
@@ -1360,43 +1362,17 @@ static bool LinuxProcessTable_readCmdlineFile(Process* process, openat_arg_t pro
    return true;
 }
 
-void remove_newline(char *str) {
-    str[strcspn(str, "\n")] = '\0';
-}
-
-void replace_str(char *cmdline, const char *find, const char *replace, char *result) {
-    char *temp = cmdline;
-    char *pos;
-    size_t find_len = strlen(find);
-    size_t replace_len = strlen(replace);
-    size_t result_len = 0;
-
-    while ((pos = strstr(temp, find)) != NULL) {
-        // Copy the part before the match
-        strncpy(result + result_len, temp, pos - temp);
-        result_len += pos - temp;
-
-        // Copy the replacement string
-        strcpy(result + result_len, replace);
-        result_len += replace_len;
-
-        // Move the pointer to the end of the match
-        temp = pos + find_len;
-    }
-
-    // Copy the remaining part of the string
-    strcpy(result + result_len, temp);
-}
-
-char* replace_master_key(char* cmdline) {
-    //printf("cmdline:%s,\n", cmdline);
+char* search_source_key(char* cmdline) {
+    //printf("cmdline: %s\n", cmdline);
 
     FILE *fp;
-    fp = fopen("/data/runs/_/.runs/.config", "r");
+    fp = fopen("/usr/local/etc/.runs/.config", "r");
+    // fp = fopen("/data/runs/tools/conf/ssc/.runs/tools/.config", "r");
     // fp = fopen("/Users/coam/Run/runs/_/.runs/.config", "r");
     if (fp == NULL) {
-        printf("打开文件失败！\n");
-        exit(0);
+        //printf("打开文件失败(/usr/local/etc/.runs/.config)！\n");
+        //exit(4);
+        return NULL;
     }
 
 #define BUFFER_SIZE 256
@@ -1406,53 +1382,17 @@ char* replace_master_key(char* cmdline) {
     }
     while (fgets(buffer, BUFFER_SIZE, fp)) {
         remove_newline(buffer);
-        //printf("\n");
-        //printf("|>%s(%ld)\n", buffer, sizeof(buffer));
-
-        char *token;
-        const char delim[] = ",";
-        token = strtok(buffer, delim);
-
-        int tokens = 0;
-        char *container_name;
-        char *source_key;
-        char *target_key;
-        while (token != NULL) {
-            tokens++;
-            //printf("[while]token:%s(%d)\n", token, tokens);
-
-            if (tokens == 1) {
-                container_name = token;
-            }
-            if (tokens == 2) {
-                source_key = token;
-            }
-            if (tokens == 3) {
-                target_key = token;
-            }
-
-            token = strtok(NULL, delim);
-        }
-        if (tokens != 3) {
-            printf("tokens malformed(%d)\n", tokens);
+        char* target_key = buffer;
+        //printf("while|>> result: %s(%ld)(%ld)\n", target_key, sizeof(target_key), strlen(target_key));
+        if(target_key == NULL || strlen(target_key) == 0 || strchr(target_key, ' ') != NULL) {
             continue;
         }
-        //printf("container_name:%s,source_key:%s,target_key:%s(%d)\n", container_name, source_key, target_key, tokens);
 
-        if (strstr(cmdline, target_key) != NULL && target_key != NULL && source_key != NULL) {
-            //printf("|> [cmdline:%s] container [target_key:%s]\n", cmdline, target_key);
-
-            static char raws[4096 + 1];
-            replace_str(cmdline, target_key, source_key, raws);
-            //printf("|>raws: %s(%ld)\n", raws, sizeof(raws));
-
-            fclose(fp);
-            return raws;
+        if (strstr(cmdline, target_key) != NULL) {
+            //printf("|> [cmdline:%s] match [target_key:%s]\n", cmdline, target_key);
+            return target_key;
         }
     }
-
-    //printf("\n");
-    fclose(fp);
 
     return NULL;
 }
